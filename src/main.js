@@ -60,114 +60,154 @@ const chipGroup = new THREE.Group();
 chipGroup.position.set(0, 0, 0); 
 board.add(chipGroup);
 
-function createChipTexture(isBump = false) {
+function createCyberChipTexture(isBump = false) {
     const canvas = document.createElement('canvas');
     canvas.width = 1024; canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     
-    // Substrate background
-    ctx.fillStyle = isBump ? '#000000' : '#0a0d14'; // Pitch black for bump mapping zero depth
+    // Background - a deep neon purple/blue
+    ctx.fillStyle = isBump ? '#000000' : '#08011a'; 
     ctx.fillRect(0, 0, 1024, 1024);
     
-    // Transistor Hierarchical Micro-grid
-    for(let i=0; i<1024; i+=16) {
-        if (i % 64 === 0) {
-            // Major grid lines
-            ctx.strokeStyle = isBump ? '#555555' : 'rgba(0, 243, 255, 0.4)';
-            ctx.lineWidth = 2; // Deep grooves and bright cyan traces
-        } else {
-            // Minor grid lines
-            ctx.strokeStyle = isBump ? '#222222' : 'rgba(0, 243, 255, 0.15)';
-            ctx.lineWidth = 1;
+    // Ultra-Realistic Etched Silicon Substrate
+    ctx.lineWidth = 1;
+    // Draw segmented data banks instead of infinite glowing grids
+    for(let y = 140; y < 880; y += 32) {
+        for(let x = 140; x < 880; x += 128) {
+            // Only draw if we are outside the core logic area
+            if (x > 360 && x < 660 && y > 360 && y < 660) continue;
+            
+            ctx.strokeStyle = isBump ? '#555555' : 'rgba(0, 243, 255, 0.05)'; // Heavy physical bumps, faint neon
+            ctx.strokeRect(x, y, 116, 24);
+            
+            // Tiny internal logic gates spaced densely inside each cluster
+            ctx.beginPath();
+            for(let lx = x + 4; lx < x + 116; lx += 8) {
+                ctx.moveTo(lx, y);
+                ctx.lineTo(lx, y + 24);
+            }
+            ctx.stroke();
         }
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
     }
     
-    // Trace colors
-    const traceCyan = isBump ? '#ffffff' : '#00f3ff';
-    const tracePurple = isBump ? '#ffffff' : '#7700ff';
-    const padMid = isBump ? '#ffffff' : '#00b3cc';
-
+    // Reduced base chip intensity to let the bright grid be the visual focus
+    const traceCyan = isBump ? '#ffffff' : '#0088aa';
     ctx.strokeStyle = traceCyan; 
     ctx.fillStyle = traceCyan;
-    ctx.shadowBlur = 0; // Pure PBR depth rules out manual shadow
+    ctx.shadowBlur = 0; 
+    ctx.shadowColor = 'transparent';
     
-    const p = 32;
-    ctx.lineWidth = 24;
-    ctx.strokeStyle = padMid;
-    ctx.strokeRect(p, p, 1024 - p*2, 1024 - p*2);
+    const margin = 120;
     
-    // Draw thick pads with alternating colors
-    for(let i=p+64; i<1024-p-64; i+=64) {
-        ctx.fillStyle = (i % 128 === 0) && !isBump ? traceCyan : padMid;
-        ctx.fillRect(p-12, i, 24, 32);     
-        ctx.fillRect(1024-p-12, i, 24, 32); 
-        ctx.fillRect(i, p-12, 32, 24);     
-        ctx.fillRect(i, 1024-p-12, 32, 24); 
+    // Outer Chip Border
+    ctx.lineWidth = 16;
+    if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(margin, margin, 1024 - margin*2, 1024 - margin*2, 24); ctx.stroke();
+    } else {
+        ctx.strokeRect(margin, margin, 1024 - margin*2, 1024 - margin*2);
+    }
+    
+    // Inner Core Border
+    const coreMargin = 384;
+    ctx.lineWidth = 12;
+    if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(coreMargin, coreMargin, 1024 - coreMargin*2, 1024 - coreMargin*2, 16); ctx.stroke();
+    } else {
+        ctx.strokeRect(coreMargin, coreMargin, 1024 - coreMargin*2, 1024 - coreMargin*2);
+    }
+    
+    // Core Fill (Solid faintly glowing center)
+    ctx.fillStyle = isBump ? '#111111' : 'rgba(0, 255, 255, 0.05)';
+    if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(coreMargin+24, coreMargin+24, 1024 - coreMargin*2 - 48, 1024 - coreMargin*2 - 48, 8); ctx.fill();
     }
 
-    ctx.lineWidth = 4;
-    const drawBank = (x, y, isAccent) => {
-        ctx.fillStyle = isBump ? '#222222' : '#051829'; 
-        ctx.strokeStyle = isBump ? '#ffffff' : (isAccent ? tracePurple : padMid);
-        ctx.fillRect(x, y, 240, 320);
-        ctx.strokeRect(x, y, 240, 320);
+    ctx.fillStyle = traceCyan;
+    const drawPad = (x, y) => { ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI*2); ctx.fill(); };
+    for(let i=240; i<=784; i+=64) {
+        drawPad(margin, i); 
+        drawPad(1024-margin, i); 
+        drawPad(i, margin); 
+        drawPad(i, 1024-margin); 
+    }
+
+    ctx.lineWidth = 12;
+    ctx.shadowBlur = 5; 
+    
+    const drawRoute = (sx, sy, bendX, bendY, ex, ey) => {
         ctx.beginPath();
-        for(let cy=y+16; cy<y+320; cy+=16) {
-            ctx.moveTo(x, cy); ctx.lineTo(x+240, cy);
-        }
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(bendX, bendY);
+        ctx.lineTo(ex, ey);
         ctx.stroke();
+        
+        // Solid end pad
+        ctx.beginPath(); ctx.arc(ex, ey, 18, 0, Math.PI*2); ctx.fill();
+        // Inner hole in end pad
+        ctx.save();
+        ctx.fillStyle = isBump ? '#000000' : '#08011a'; 
+        ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
     };
-    drawBank(128, 128, true); 
-    drawBank(1024-368, 128, false); 
-    drawBank(128, 1024-448, false); 
-    drawBank(1024-368, 1024-448, true); 
 
-    // Core
-    ctx.fillStyle = isBump ? '#aaaaaa' : '#0a101a'; // Very dark inner core
-    ctx.strokeStyle = isBump ? '#ffffff' : traceCyan;
-    ctx.fillRect(384, 384, 256, 256);
-    ctx.lineWidth = 8;
-    ctx.strokeRect(384, 384, 256, 256);
-    
-    // Inner trace ring in core
-    ctx.strokeStyle = isBump ? '#ffffff' : tracePurple; // Purple inner ring
-    ctx.lineWidth = 2;
-    ctx.strokeRect(400, 400, 224, 224);
+    // Procedurally map beautiful symmetrical dense traces covering all bounds!
+    const drawDenseRoute = (side, padPos) => {
+        let sx, sy, bendX, bendY, ex, ey;
+        // isDirect means it's perfectly aligned to hit the squarish core directly
+        let isDirect = padPos > 320 && padPos < 704; 
+        
+        let pOffset = (padPos < 512) ? 40 : -40; // 45 angle shift towards center
+        
+        if (side === 'top') {
+            sx = padPos; sy = margin + 12; 
+            ex = isDirect ? sx : sx + pOffset;
+            bendX = ex;
+            bendY = sy + (isDirect ? 60 : 80 + (padPos%128)/2);
+            ey = coreMargin - 24; 
+        }
+        else if (side === 'bottom') {
+            sx = padPos; sy = 1024 - margin - 12; 
+            ex = isDirect ? sx : sx + pOffset;
+            bendX = ex;
+            bendY = sy - (isDirect ? 60 : 80 + (padPos%128)/2);
+            ey = 1024 - coreMargin + 24; 
+        }
+        else if (side === 'left') {
+            sy = padPos; sx = margin + 12; 
+            ey = isDirect ? sy : sy + pOffset;
+            bendY = ey;
+            bendX = sx + (isDirect ? 60 : 80 + (padPos%128)/2);
+            ex = coreMargin - 24; 
+        }
+        else if (side === 'right') {
+            sy = padPos; sx = 1024 - margin - 12; 
+            ey = isDirect ? sy : sy + pOffset;
+            bendY = ey;
+            bendX = sx - (isDirect ? 60 : 80 + (padPos%128)/2);
+            ex = 1024 - coreMargin + 24; 
+        }
+        drawRoute(sx, sy, bendX, bendY, ex, ey);
+    };
 
-    // Buses
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = traceCyan;
-    ctx.beginPath();
-    for(let i=416; i<=608; i+=16) {
-        ctx.moveTo(368, i); ctx.lineTo(384, i);
-        ctx.moveTo(640, i); ctx.lineTo(656, i);
-        ctx.moveTo(i, 368); ctx.lineTo(i, 384);
-        ctx.moveTo(i, 640); ctx.lineTo(i, 656);
-    }
-    ctx.stroke();
-    
-    // Core grid dots
-    ctx.fillStyle = isBump ? '#ffffff' : tracePurple;
-    for(let bx=432; bx<=592; bx+=32) {
-        for(let by=432; by<=592; by+=32) {
-            if (bx===512 && by===512) continue; // center
-            ctx.beginPath(); ctx.arc(bx, by, 3, 0, Math.PI*2); ctx.fill();
+    // Execute for every pad location we created earlier!
+    for(let i=240; i<=784; i+=64) {
+        if (i !== 512) { // Skip the exact geometric center point
+            drawDenseRoute('top', i);
+            drawDenseRoute('bottom', i);
+            drawDenseRoute('left', i);
+            drawDenseRoute('right', i);
         }
     }
     
-    // Core text
-    if (!isBump) {
-        ctx.fillStyle = '#ffffff'; 
-        ctx.font = 'bold 36px "Exo 2", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('AETHRYX', 512, 512 - 20);
-        ctx.font = '24px "Orbitron", sans-serif';
-        ctx.fillStyle = '#aaaaaa';
-        ctx.fillText('QUANTUM CORE', 512, 512 + 20);
+    // Four corner mounting holes
+    const drawHole = (hx, hy) => {
+        ctx.beginPath(); ctx.arc(hx, hy, 18, 0, Math.PI*2); ctx.stroke();
     }
+    drawHole(margin + 48, margin + 48);
+    drawHole(1024 - margin - 48, margin + 48);
+    drawHole(margin + 48, 1024 - margin - 48);
+    drawHole(1024 - margin - 48, 1024 - margin - 48);
     
     const texture = new THREE.CanvasTexture(canvas);
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -179,20 +219,20 @@ function createAuraTexture() {
     canvas.width = 256; canvas.height = 256;
     const ctx = canvas.getContext('2d');
     const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    gradient.addColorStop(0, 'rgba(0, 243, 255, 0.4)');
-    gradient.addColorStop(0.3, 'rgba(0, 100, 255, 0.2)');
+    gradient.addColorStop(0, 'rgba(0, 255, 255, 0.4)');
+    gradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.1)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 256, 256);
     return new THREE.CanvasTexture(canvas);
 }
 
-// 1A. Soft subtle aura
+// 1A. Intense Glow Aura
 const auraGeo = new THREE.PlaneGeometry(35, 35);
 const auraMat = new THREE.MeshBasicMaterial({
     map: createAuraTexture(),
     transparent: true,
-    opacity: 0.0, // removed aura completely
+    opacity: 0.3,
     blending: THREE.AdditiveBlending,
     depthWrite: false
 });
@@ -200,99 +240,105 @@ const auraMesh = new THREE.Mesh(auraGeo, auraMat);
 auraMesh.position.z = -1;
 chipGroup.add(auraMesh);
 
-// 1B. Sleek Black Base (16x16)
+// 1B. Base Platform (pure dark)
 const baseGeo = new THREE.BoxGeometry(16, 16, 1.5); 
 const baseMat = new THREE.MeshPhysicalMaterial({
-    color: 0x07111c, 
+    color: 0x020a16, 
     metalness: 0.9,  
     roughness: 0.3, 
 });
 const baseMesh = new THREE.Mesh(baseGeo, baseMat);
 chipGroup.add(baseMesh);
 
-// 1C. High-End PBR Die Surface
+// 1C. Glowing TRON Die Surface
 const logoGeo = new THREE.PlaneGeometry(16, 16);
-const chipMap = createChipTexture(false);
-const chipBump = createChipTexture(true);
+const chipMap = createCyberChipTexture(false);
+const chipBump = createCyberChipTexture(true);
 
 const logoMat = new THREE.MeshPhysicalMaterial({ 
     map: chipMap,
     bumpMap: chipBump,
-    bumpScale: 0.08,
-    metalness: 0.8,
-    roughness: 0.3,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.1,
-    transparent: false
+    bumpScale: 0.1,
+    metalness: 0.9,
+    roughness: 0.6, // Rougher to stop specular blowouts underneath the glass
+    color: 0x888888, // Muted base reflection
+    emissiveMap: chipBump, 
+    emissive: 0x0088cc, // Softened cyan emission
+    emissiveIntensity: 0.8 // Dramatically reduced so the fine grid remains legible
 });
 const logoMesh = new THREE.Mesh(logoGeo, logoMat);
 logoMesh.position.z = 0.76; 
 chipGroup.add(logoMesh);
 
-// Add strong directional light to highlight metallic traces & bumps
-const directionalLight = new THREE.DirectionalLight(0x00f3ff, 4.0); // Matching cyan theme, brighter
-directionalLight.position.set(5, 10, 15);
+// 1D. Awwwards Style Refractive Glass Dome
+const glassGeo = new THREE.BoxGeometry(15.6, 15.6, 0.4);
+const glassMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    metalness: 0.1,
+    roughness: 0.05,
+    transmission: 1.0, // High-end glass refraction
+    ior: 1.5,
+    thickness: 0.5,
+    transparent: true
+});
+const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+glassMesh.position.z = 0.96; // Encapsulates the inner die
+chipGroup.add(glassMesh);
+
+// Bring back lights for PBR
+const directionalLight = new THREE.DirectionalLight(0x00f3ff, 1.2); // Reduced from 4.5
+directionalLight.position.set(5, 12, 10);
 scene.add(directionalLight);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 2.0); // Major brightness lift
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Reduced from 2.0
 scene.add(ambientLight);
+chipGroup.add(logoMesh);
 
 
 // ---- 2. DENSE PCB PATHWAYS ----
 function generateBasePaths() {
     const qPaths = [];
-    const numTop = isMobile ? 6 : 14;
-    const numRight = isMobile ? 4 : 10;
+    const numPins = 5; 
     
-    // Top Edge paths (Square Base Plate is 16x16, top edge y=8)
-    for(let i=0; i<numTop; i++) {
-        let px = 1 + (i / numTop) * 6; 
-        let py = 8.5; // Start precisely off the chip
+    // Top Edge paths 
+    for(let i=0; i<numPins; i++) {
+        let px = 1 + (i / numPins) * 6; // x goes 1 -> 7
+        let py = 8.0; // Outer edge of 16x16 chip
         const pts = [new THREE.Vector3(px, py, 0)];
         
-        let currentDir = 'up'; 
-        for(let s=0; s<4; s++) {
-            let len = Math.random() * 8 + 6; 
-            if(currentDir === 'up') {
-                py += len;
-                currentDir = (i % 2 === 0) ? 'diag-right' : 'right';
-            } else if(currentDir === 'right') {
-                px += len;
-                currentDir = 'up';
-            } else if(currentDir === 'diag-right') {
-                px += len;
-                py += len;
-                currentDir = Math.random() > 0.5 ? 'up' : 'right';
-            }
-            pts.push(new THREE.Vector3(px, py, 0));
-        }
-        pts.push(new THREE.Vector3(px + (currentDir==='right'?60:0), py + (currentDir==='up'?60:60), 0)); 
+        let len1 = 2 + (i % 2) * 2; 
+        py += len1;
+        pts.push(new THREE.Vector3(px, py, 0));
+        
+        // 45 degree jog
+        let len2 = 4 + i;
+        px += len2; py += len2;
+        pts.push(new THREE.Vector3(px, py, 0));
+        
+        // Straight line to edge
+        py += 60;
+        pts.push(new THREE.Vector3(px, py, 0));
         qPaths.push(pts);
     }
     
-    // Right Edge paths (right edge is x=8)
-    for(let i=0; i<numRight; i++) {
-        let px = 8.5;
-        let py = 1 + (i / numRight) * 6;
+    // Right Edge paths
+    for(let i=0; i<numPins; i++) {
+        let px = 8.0;
+        let py = 1 + (i / numPins) * 6;
         const pts = [new THREE.Vector3(px, py, 0)];
         
-        let currentDir = 'right'; 
-        for(let s=0; s<4; s++) {
-            let len = Math.random() * 8 + 6;
-            if(currentDir === 'right') {
-                px += len;
-                currentDir = (i % 2 === 0) ? 'diag-up' : 'up';
-            } else if(currentDir === 'up') {
-                py += len;
-                currentDir = 'right';
-            } else if(currentDir === 'diag-up') {
-                px += len;
-                py += len;
-                currentDir = Math.random() > 0.5 ? 'right' : 'up';
-            }
-            pts.push(new THREE.Vector3(px, py, 0));
-        }
-        pts.push(new THREE.Vector3(px + 60, py + 60, 0));
+        let len1 = 2 + (i % 2) * 2;
+        px += len1;
+        pts.push(new THREE.Vector3(px, py, 0));
+        
+        // 45 deg jog
+        let len2 = 4 + i;
+        px += len2; py += len2;
+        pts.push(new THREE.Vector3(px, py, 0));
+        
+        // Straight line
+        px += 60;
+        pts.push(new THREE.Vector3(px, py, 0));
         qPaths.push(pts);
     }
     return qPaths;
