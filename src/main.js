@@ -14,7 +14,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(pixelRatio);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000103, 0.004); 
+scene.fog = new THREE.FogExp2(0x000103, 0.004);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 0, 10); // Start very close to the chip for splash animation
@@ -36,7 +36,7 @@ const colors = {
     baseMetal: 0x020614,
     glassDie: 0x01132b,
     glowCyan: 0x00f3ff,
-    circuitLine: 0x0066cc, 
+    circuitLine: 0x00aacc, // Slightly muted active cyan
     node: 0x0088ff,
     electron: 0x00f3ff,
     accent: 0x7700ff,
@@ -57,97 +57,97 @@ board.add(gridHelper);
 
 // ---- 1. RANDOMIZED MATRIX CHIP ----
 const chipGroup = new THREE.Group();
-chipGroup.position.set(0, 0, 0); 
+chipGroup.position.set(0, 0, 0);
 board.add(chipGroup);
 
 function createCyberChipTexture(isBump = false) {
     const canvas = document.createElement('canvas');
     canvas.width = 1024; canvas.height = 1024;
     const ctx = canvas.getContext('2d');
-    
+
     // Background - a deep neon purple/blue
-    ctx.fillStyle = isBump ? '#000000' : '#08011a'; 
+    ctx.fillStyle = isBump ? '#000000' : '#08011a';
     ctx.fillRect(0, 0, 1024, 1024);
-    
+
     // Ultra-Realistic Etched Silicon Substrate
     ctx.lineWidth = 1;
     // Draw segmented data banks instead of infinite glowing grids
-    for(let y = 140; y < 880; y += 32) {
-        for(let x = 140; x < 880; x += 128) {
+    for (let y = 140; y < 880; y += 32) {
+        for (let x = 140; x < 880; x += 128) {
             // Only draw if we are outside the core logic area
             if (x > 360 && x < 660 && y > 360 && y < 660) continue;
-            
+
             ctx.strokeStyle = isBump ? '#555555' : 'rgba(0, 243, 255, 0.05)'; // Heavy physical bumps, faint neon
             ctx.strokeRect(x, y, 116, 24);
-            
+
             // Tiny internal logic gates spaced densely inside each cluster
             ctx.beginPath();
-            for(let lx = x + 4; lx < x + 116; lx += 8) {
+            for (let lx = x + 4; lx < x + 116; lx += 8) {
                 ctx.moveTo(lx, y);
                 ctx.lineTo(lx, y + 24);
             }
             ctx.stroke();
         }
     }
-    
+
     // Reduced base chip intensity to let the bright grid be the visual focus
     const traceCyan = isBump ? '#ffffff' : '#0088aa';
-    ctx.strokeStyle = traceCyan; 
+    ctx.strokeStyle = traceCyan;
     ctx.fillStyle = traceCyan;
-    ctx.shadowBlur = 0; 
+    ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
-    
+
     const margin = 120;
-    
+
     // Outer Chip Border
     ctx.lineWidth = 16;
     if (ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(margin, margin, 1024 - margin*2, 1024 - margin*2, 24); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(margin, margin, 1024 - margin * 2, 1024 - margin * 2, 24); ctx.stroke();
     } else {
-        ctx.strokeRect(margin, margin, 1024 - margin*2, 1024 - margin*2);
+        ctx.strokeRect(margin, margin, 1024 - margin * 2, 1024 - margin * 2);
     }
-    
+
     // Inner Core Border
     const coreMargin = 384;
     ctx.lineWidth = 12;
     if (ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(coreMargin, coreMargin, 1024 - coreMargin*2, 1024 - coreMargin*2, 16); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(coreMargin, coreMargin, 1024 - coreMargin * 2, 1024 - coreMargin * 2, 16); ctx.stroke();
     } else {
-        ctx.strokeRect(coreMargin, coreMargin, 1024 - coreMargin*2, 1024 - coreMargin*2);
+        ctx.strokeRect(coreMargin, coreMargin, 1024 - coreMargin * 2, 1024 - coreMargin * 2);
     }
-    
+
     // Core Fill (Solid faintly glowing center)
     ctx.fillStyle = isBump ? '#111111' : 'rgba(0, 255, 255, 0.05)';
     if (ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(coreMargin+24, coreMargin+24, 1024 - coreMargin*2 - 48, 1024 - coreMargin*2 - 48, 8); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(coreMargin + 24, coreMargin + 24, 1024 - coreMargin * 2 - 48, 1024 - coreMargin * 2 - 48, 8); ctx.fill();
     }
 
     ctx.fillStyle = traceCyan;
-    const drawPad = (x, y) => { ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI*2); ctx.fill(); };
-    for(let i=240; i<=784; i+=64) {
-        drawPad(margin, i); 
-        drawPad(1024-margin, i); 
-        drawPad(i, margin); 
-        drawPad(i, 1024-margin); 
+    const drawPad = (x, y) => { ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); };
+    for (let i = 240; i <= 784; i += 64) {
+        drawPad(margin, i);
+        drawPad(1024 - margin, i);
+        drawPad(i, margin);
+        drawPad(i, 1024 - margin);
     }
 
     ctx.lineWidth = 12;
-    ctx.shadowBlur = 5; 
-    
+    ctx.shadowBlur = 5;
+
     const drawRoute = (sx, sy, bendX, bendY, ex, ey) => {
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         ctx.lineTo(bendX, bendY);
         ctx.lineTo(ex, ey);
         ctx.stroke();
-        
+
         // Solid end pad
-        ctx.beginPath(); ctx.arc(ex, ey, 18, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex, ey, 18, 0, Math.PI * 2); ctx.fill();
         // Inner hole in end pad
         ctx.save();
-        ctx.fillStyle = isBump ? '#000000' : '#08011a'; 
+        ctx.fillStyle = isBump ? '#000000' : '#08011a';
         ctx.shadowBlur = 0;
-        ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     };
 
@@ -155,43 +155,43 @@ function createCyberChipTexture(isBump = false) {
     const drawDenseRoute = (side, padPos) => {
         let sx, sy, bendX, bendY, ex, ey;
         // isDirect means it's perfectly aligned to hit the squarish core directly
-        let isDirect = padPos > 320 && padPos < 704; 
-        
+        let isDirect = padPos > 320 && padPos < 704;
+
         let pOffset = (padPos < 512) ? 40 : -40; // 45 angle shift towards center
-        
+
         if (side === 'top') {
-            sx = padPos; sy = margin + 12; 
+            sx = padPos; sy = margin + 12;
             ex = isDirect ? sx : sx + pOffset;
             bendX = ex;
-            bendY = sy + (isDirect ? 60 : 80 + (padPos%128)/2);
-            ey = coreMargin - 24; 
+            bendY = sy + (isDirect ? 60 : 80 + (padPos % 128) / 2);
+            ey = coreMargin - 24;
         }
         else if (side === 'bottom') {
-            sx = padPos; sy = 1024 - margin - 12; 
+            sx = padPos; sy = 1024 - margin - 12;
             ex = isDirect ? sx : sx + pOffset;
             bendX = ex;
-            bendY = sy - (isDirect ? 60 : 80 + (padPos%128)/2);
-            ey = 1024 - coreMargin + 24; 
+            bendY = sy - (isDirect ? 60 : 80 + (padPos % 128) / 2);
+            ey = 1024 - coreMargin + 24;
         }
         else if (side === 'left') {
-            sy = padPos; sx = margin + 12; 
+            sy = padPos; sx = margin + 12;
             ey = isDirect ? sy : sy + pOffset;
             bendY = ey;
-            bendX = sx + (isDirect ? 60 : 80 + (padPos%128)/2);
-            ex = coreMargin - 24; 
+            bendX = sx + (isDirect ? 60 : 80 + (padPos % 128) / 2);
+            ex = coreMargin - 24;
         }
         else if (side === 'right') {
-            sy = padPos; sx = 1024 - margin - 12; 
+            sy = padPos; sx = 1024 - margin - 12;
             ey = isDirect ? sy : sy + pOffset;
             bendY = ey;
-            bendX = sx - (isDirect ? 60 : 80 + (padPos%128)/2);
-            ex = 1024 - coreMargin + 24; 
+            bendX = sx - (isDirect ? 60 : 80 + (padPos % 128) / 2);
+            ex = 1024 - coreMargin + 24;
         }
         drawRoute(sx, sy, bendX, bendY, ex, ey);
     };
 
     // Execute for every pad location we created earlier!
-    for(let i=240; i<=784; i+=64) {
+    for (let i = 240; i <= 784; i += 64) {
         if (i !== 512) { // Skip the exact geometric center point
             drawDenseRoute('top', i);
             drawDenseRoute('bottom', i);
@@ -199,16 +199,16 @@ function createCyberChipTexture(isBump = false) {
             drawDenseRoute('right', i);
         }
     }
-    
+
     // Four corner mounting holes
     const drawHole = (hx, hy) => {
-        ctx.beginPath(); ctx.arc(hx, hy, 18, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(hx, hy, 18, 0, Math.PI * 2); ctx.stroke();
     }
     drawHole(margin + 48, margin + 48);
     drawHole(1024 - margin - 48, margin + 48);
     drawHole(margin + 48, 1024 - margin - 48);
     drawHole(1024 - margin - 48, 1024 - margin - 48);
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return texture;
@@ -241,11 +241,11 @@ auraMesh.position.z = -1;
 chipGroup.add(auraMesh);
 
 // 1B. Base Platform (pure dark)
-const baseGeo = new THREE.BoxGeometry(16, 16, 1.5); 
+const baseGeo = new THREE.BoxGeometry(16, 16, 1.5);
 const baseMat = new THREE.MeshPhysicalMaterial({
-    color: 0x020a16, 
-    metalness: 0.9,  
-    roughness: 0.3, 
+    color: 0x020a16,
+    metalness: 0.9,
+    roughness: 0.3,
 });
 const baseMesh = new THREE.Mesh(baseGeo, baseMat);
 chipGroup.add(baseMesh);
@@ -255,19 +255,19 @@ const logoGeo = new THREE.PlaneGeometry(16, 16);
 const chipMap = createCyberChipTexture(false);
 const chipBump = createCyberChipTexture(true);
 
-const logoMat = new THREE.MeshPhysicalMaterial({ 
+const logoMat = new THREE.MeshPhysicalMaterial({
     map: chipMap,
     bumpMap: chipBump,
     bumpScale: 0.1,
     metalness: 0.9,
-    roughness: 0.6, // Rougher to stop specular blowouts underneath the glass
-    color: 0x888888, // Muted base reflection
-    emissiveMap: chipBump, 
-    emissive: 0x0088cc, // Softened cyan emission
-    emissiveIntensity: 0.8 // Dramatically reduced so the fine grid remains legible
+    roughness: 0.6,
+    color: 0x444444,
+    emissiveMap: chipBump,
+    emissive: 0x00bbee,
+    emissiveIntensity: 1.0 // Reduced back down significantly
 });
 const logoMesh = new THREE.Mesh(logoGeo, logoMat);
-logoMesh.position.z = 0.76; 
+logoMesh.position.z = 0.76;
 chipGroup.add(logoMesh);
 
 // 1D. Awwwards Style Refractive Glass Dome
@@ -298,44 +298,44 @@ chipGroup.add(logoMesh);
 // ---- 2. DENSE PCB PATHWAYS ----
 function generateBasePaths() {
     const qPaths = [];
-    const numPins = 5; 
-    
+    const numPins = 5;
+
     // Top Edge paths 
-    for(let i=0; i<numPins; i++) {
+    for (let i = 0; i < numPins; i++) {
         let px = 1 + (i / numPins) * 6; // x goes 1 -> 7
         let py = 8.0; // Outer edge of 16x16 chip
         const pts = [new THREE.Vector3(px, py, 0)];
-        
-        let len1 = 2 + (i % 2) * 2; 
+
+        let len1 = 2 + (i % 2) * 2;
         py += len1;
         pts.push(new THREE.Vector3(px, py, 0));
-        
+
         // 45 degree jog
         let len2 = 4 + i;
         px += len2; py += len2;
         pts.push(new THREE.Vector3(px, py, 0));
-        
+
         // Straight line to edge
         py += 60;
         pts.push(new THREE.Vector3(px, py, 0));
         qPaths.push(pts);
     }
-    
+
     // Right Edge paths
-    for(let i=0; i<numPins; i++) {
+    for (let i = 0; i < numPins; i++) {
         let px = 8.0;
         let py = 1 + (i / numPins) * 6;
         const pts = [new THREE.Vector3(px, py, 0)];
-        
+
         let len1 = 2 + (i % 2) * 2;
         px += len1;
         pts.push(new THREE.Vector3(px, py, 0));
-        
+
         // 45 deg jog
         let len2 = 4 + i;
         px += len2; py += len2;
         pts.push(new THREE.Vector3(px, py, 0));
-        
+
         // Straight line
         px += 60;
         pts.push(new THREE.Vector3(px, py, 0));
@@ -360,15 +360,15 @@ mirrors.forEach(([mx, my]) => {
         const mirroredPts = pts.map(p => new THREE.Vector3(p.x * mx, p.y * my, 0));
         const curve = new THREE.CatmullRomCurve3(mirroredPts, false, 'catmullrom', 0);
         paths.push(curve);
-        
+
         const geo = new THREE.BufferGeometry().setFromPoints(mirroredPts);
-        const mat = new THREE.LineBasicMaterial({ color: colors.circuitLine, transparent: true, opacity: 0.4 });
+        const mat = new THREE.LineBasicMaterial({ color: colors.circuitLine, transparent: true, opacity: 0.5 }); // Halved visibility to prevent glare
         const line = new THREE.Line(geo, mat);
         board.add(line);
-        
+
         // Nodes
-        for(let j=1; j<mirroredPts.length-1; j++) {
-            if(Math.random() > 0.4) {
+        for (let j = 1; j < mirroredPts.length - 1; j++) {
+            if (Math.random() > 0.4) {
                 const nodeGeo = new THREE.CircleGeometry(0.3, 16);
                 const nodeMat = new THREE.MeshBasicMaterial({ color: colors.node, transparent: true, opacity: 0.8 });
                 const node = new THREE.Mesh(nodeGeo, nodeMat);
@@ -376,20 +376,20 @@ mirrors.forEach(([mx, my]) => {
                 board.add(node);
             }
         }
-        
+
         // Dynamic electrons
-        if(Math.random() > 0.2) {
+        if (Math.random() > 0.2) {
             const numElectrons = isMobile ? 1 : (Math.random() > 0.8 ? 2 : 1);
-            for(let e=0; e<numElectrons; e++) {
-                const eGeo = new THREE.CircleGeometry(0.5, 16); 
+            for (let e = 0; e < numElectrons; e++) {
+                const eGeo = new THREE.CircleGeometry(0.5, 16);
                 const eMat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.7 ? colors.accent : colors.electron });
                 const mesh = new THREE.Mesh(eGeo, eMat);
-                mesh.position.z = 0.1; 
+                mesh.position.z = 0.1;
                 board.add(mesh);
                 electrons.push({
-                    mesh, 
-                    path: curve, 
-                    progress: Math.random(), 
+                    mesh,
+                    path: curve,
+                    progress: Math.random(),
                     baseSpeed: Math.random() * 0.002 + 0.001 // Tripled the electron base speed for faster energy flow
                 });
             }
@@ -401,10 +401,10 @@ mirrors.forEach(([mx, my]) => {
 const particleCount = isMobile ? 100 : 300;
 const particleGeometry = new THREE.BufferGeometry();
 const particlePositions = new Float32Array(particleCount * 3);
-for(let i=0; i<particleCount; i++) {
-    particlePositions[i*3] = (Math.random() - 0.5) * 200;
-    particlePositions[i*3+1] = (Math.random() - 0.5) * 200;
-    particlePositions[i*3+2] = (Math.random() - 0.5) * 50 - 10; 
+for (let i = 0; i < particleCount; i++) {
+    particlePositions[i * 3] = (Math.random() - 0.5) * 200;
+    particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 200;
+    particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 50 - 10;
 }
 particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
 const particleMaterial = new THREE.PointsMaterial({
@@ -457,33 +457,33 @@ function animate() {
 
     // Static background rotation
     particles.rotation.z = time * 0.01;
-    
+
     // Electron Animation 
     electrons.forEach((electron) => {
-        const speedMultiplier = 0.5 + Math.sin(electron.progress * Math.PI) * 0.8; 
+        const speedMultiplier = 0.5 + Math.sin(electron.progress * Math.PI) * 0.8;
         electron.progress += electron.baseSpeed * speedMultiplier;
-        
+
         if (electron.progress > 1) {
             electron.progress = 0;
         }
-        
+
         const point = electron.path.getPointAt(electron.progress);
         if (point) {
             electron.mesh.position.copy(point);
-            
+
             let scaleMod = 1.0;
             if (electron.progress < 0.05) {
-                scaleMod = electron.progress / 0.05; 
+                scaleMod = electron.progress / 0.05;
             } else if (electron.progress > 0.95) {
-                scaleMod = (1.0 - electron.progress) / 0.05; 
+                scaleMod = (1.0 - electron.progress) / 0.05;
             }
             electron.mesh.scale.setScalar(scaleMod);
         }
     });
-    
+
     // Subtle aura pulse
-    auraMesh.scale.setScalar(1.0); 
-    auraMesh.material.opacity = 0.1; 
+    auraMesh.scale.setScalar(1.0);
+    auraMesh.material.opacity = 0.1;
 
     composer.render();
 }
@@ -537,7 +537,7 @@ gsap.utils.toArray('.glow-orb').forEach((orb) => {
             trigger: document.body,
             start: "top top",
             end: "bottom top",
-            scrub: true 
+            scrub: true
         }
     });
 });
@@ -548,11 +548,11 @@ sections.forEach(section => {
     // Select elements to stagger
     const headings = section.querySelectorAll('h1, h2, h3, p:not(.event-card p)');
     const cards = section.querySelectorAll('.glass-panel');
-    
+
     // Initial states
-    if(headings.length > 0) gsap.set(headings, { opacity: 0, y: 40 });
-    if(cards.length > 0) gsap.set(cards, { opacity: 0, y: 80, scale: 0.95 });
-    
+    if (headings.length > 0) gsap.set(headings, { opacity: 0, y: 40 });
+    if (cards.length > 0) gsap.set(cards, { opacity: 0, y: 80, scale: 0.95 });
+
     // Create timeline
     const tl = gsap.timeline({
         scrollTrigger: {
@@ -562,17 +562,17 @@ sections.forEach(section => {
         }
     });
 
-    if(headings.length > 0) {
+    if (headings.length > 0) {
         tl.to(headings, {
-            opacity: 1, 
-            y: 0, 
-            duration: 1.6, 
-            stagger: 0.1, 
+            opacity: 1,
+            y: 0,
+            duration: 1.6,
+            stagger: 0.1,
             ease: "expo.out"
         });
     }
 
-    if(cards.length > 0) {
+    if (cards.length > 0) {
         tl.to(cards, {
             opacity: 1,
             y: 0,
@@ -593,7 +593,7 @@ const EVENT_DATA = {
     paper: {
         icon: '<i class="fas fa-file-code"></i>',
         category: 'Technical Protocol',
-        title: 'Paper Presentation',
+        title: '(PAPER X) Paper Presentation',
         accent: false,
         description: 'Showcase your original research and innovative ideas in VLSI Design, Microelectronics, Embedded Systems, and allied domains. Participants will present their work before a panel of faculty judges and receive professional feedback.',
         teamSize: '2 – 3 Members',
@@ -621,7 +621,7 @@ const EVENT_DATA = {
     quiz: {
         icon: '<i class="fas fa-microchip"></i>',
         category: 'Technical Protocol',
-        title: 'Technical Quiz (Tech Q)',
+        title: '(TECH Q) TECHNICAL QUIZ',
         accent: false,
         description: 'Test the depth of your technical knowledge spanning digital electronics, circuit design, semiconductor physics, VLSI fundamentals, and current industry trends. A fast-paced, high-intensity quiz for the sharpest minds.',
         teamSize: '2 Members',
@@ -649,7 +649,7 @@ const EVENT_DATA = {
     poster: {
         icon: '<i class="fas fa-chalkboard"></i>',
         category: 'Technical Protocol',
-        title: 'Poster Presentation',
+        title: '(Vision Grid) Poster presentation',
         accent: false,
         description: 'Communicate complex engineering concepts through visually engaging, high-impact technical posters. Participants defend their work to a roving panel of judges in an exhibition-style format.',
         teamSize: '2 – 3 Members',
@@ -673,10 +673,35 @@ const EVENT_DATA = {
         ],
     },
 
+    coding: {
+        icon: '<i class="fas fa-laptop-code"></i>',
+        category: 'Technical Protocol',
+        title: 'Logic League (coding contest)',
+        accent: false,
+        description: 'Compile, debug, and execute your way through high-stakes algorithmic challenges. Prove your logic and coding efficiency in a fast-paced programming environment.',
+        teamSize: '1 – 2 Members',
+        duration: '2 Hours',
+        eligibility: 'UG / PG Students',
+        rounds: [
+            { label: 'Round 1 — Logic Gates', desc: 'Solve rapid-fire MCQs on output prediction, syntax, and fundamental data structures.' },
+            { label: 'Round 2 — The Matrix', desc: 'Write and compile robust algorithms to solve 3 complex competitive programming problems.' },
+        ],
+        rules: [
+            'Teams can consist of 1 or 2 members.',
+            'Allowed languages: C, C++, Java, and Python.',
+            'Internet access is strictly capped to the competition platform.',
+            'Plagiarism checking algorithms will be run; identical codes will lead to disqualification.',
+        ],
+        coordinators: [
+            { name: 'Karthik S', phone: '+91 99887 11223' },
+            { name: 'Pooja V', phone: '+91 88776 22334' },
+        ],
+    },
+
     doodle: {
         icon: '<i class="fas fa-pen-fancy"></i>',
         category: 'Offline Module',
-        title: 'Doodle & Guess',
+        title: 'Picto Play (doodle & guess)',
         accent: true,
         description: 'A hilarious and creative team game where one member draws a tech or general concept on the whiteboard while teammates race to guess the word correctly. Speed, creativity, and teamwork win the day!',
         teamSize: '3 – 4 Members',
@@ -704,7 +729,7 @@ const EVENT_DATA = {
     ipl: {
         icon: '<i class="fas fa-gavel"></i>',
         category: 'Offline Module',
-        title: 'IPL Auction',
+        title: 'Bid wars (ipl auction)',
         accent: true,
         description: 'Experience the thrill of the IPL mega auction! Each team plays the role of an IPL franchise management team, bidding strategically within a budget to build the most balanced and powerful cricket squad.',
         teamSize: '4 – 6 Members',
@@ -733,7 +758,7 @@ const EVENT_DATA = {
     funq: {
         icon: '<i class="fas fa-brain"></i>',
         category: 'Offline Module',
-        title: 'Fun Q',
+        title: 'Fun Q (non technical Quiz)',
         accent: true,
         description: 'A lively and entertaining general knowledge quiz covering pop culture, movies, sports, science facts, lateral thinking puzzles, and more. Perfect for quick thinkers who love a good mental challenge!',
         teamSize: '2 Members',
@@ -757,37 +782,62 @@ const EVENT_DATA = {
             { name: 'Vikram S', phone: '+91 44332 21100' },
         ],
     },
+
+    movie: {
+        icon: '<i class="fas fa-film"></i>',
+        category: 'Offline Module',
+        title: 'Film fiesta (movie hunt)',
+        accent: true,
+        description: 'Decode cinematic clues, decipher audio tracks, and race against time in this immersive movie-themed scavenger hunt across the campus.',
+        teamSize: '3 – 4 Members',
+        duration: '1.5 Hours',
+        eligibility: 'Open to All Students',
+        rounds: [
+            { label: 'Round 1 — Audio Dash', desc: 'Identify movies from obscure BGM and dialogue snippets to secure the first map.' },
+            { label: 'Round 2 — Frame by Frame', desc: 'Follow a trail of physical movie posters across campus, solving puzzles at each checkpoint.' },
+        ],
+        rules: [
+            'Team size: exactly 3 to 4 members.',
+            'Teams must stay together; splitting up to find clues leads to time penalties.',
+            'Use of smartphones for reverse image searching is prohibited during checkpoints.',
+            'The first team to decode the final sequence and reach the endpoint wins.',
+        ],
+        coordinators: [
+            { name: 'Sanjay M', phone: '+91 77665 99887' },
+            { name: 'Ananya K', phone: '+91 66554 88776' },
+        ],
+    },
 };
 
 // ---- MODAL DOM REFERENCES ----
-const modal        = document.getElementById('event-modal');
-const modalClose   = document.getElementById('modal-close');
+const modal = document.getElementById('event-modal');
+const modalClose = document.getElementById('modal-close');
 const modalBackdrop = modal.querySelector('.modal-backdrop');
 
-const elIcon        = document.getElementById('modal-icon');
-const elCategory    = document.getElementById('modal-category');
-const elTitle       = document.getElementById('modal-title');
+const elIcon = document.getElementById('modal-icon');
+const elCategory = document.getElementById('modal-category');
+const elTitle = document.getElementById('modal-title');
 const elDescription = document.getElementById('modal-description');
-const elTeam        = document.getElementById('meta-team');
-const elDuration    = document.getElementById('meta-duration');
+const elTeam = document.getElementById('meta-team');
+const elDuration = document.getElementById('meta-duration');
 const elEligibility = document.getElementById('meta-eligibility');
-const elRounds      = document.getElementById('modal-rounds');
-const elRulesEl     = document.getElementById('modal-rules');
-const elCoords      = document.getElementById('modal-coordinators');
+const elRounds = document.getElementById('modal-rounds');
+const elRulesEl = document.getElementById('modal-rules');
+const elCoords = document.getElementById('modal-coordinators');
 const roundsSection = document.getElementById('rounds-section');
-const registerBtn   = document.getElementById('modal-register');
+const registerBtn = document.getElementById('modal-register');
 
 function openModal(eventKey) {
     const data = EVENT_DATA[eventKey];
     if (!data) return;
 
     // Populate
-    elIcon.innerHTML        = data.icon;
-    elCategory.textContent  = data.category;
-    elTitle.textContent     = data.title;
+    elIcon.innerHTML = data.icon;
+    elCategory.textContent = data.category;
+    elTitle.textContent = data.title;
     elDescription.textContent = data.description;
-    elTeam.textContent      = data.teamSize;
-    elDuration.textContent  = data.duration;
+    elTeam.textContent = data.teamSize;
+    elDuration.textContent = data.duration;
     elEligibility.textContent = data.eligibility;
 
     // Rounds
@@ -863,7 +913,7 @@ window.addEventListener('load', () => {
     const title = document.querySelector('.splash-title');
     const subtitle = document.querySelector('.splash-subtitle');
     const line = document.querySelector('.splash-line');
-    
+
     // Create master intro timeline
     const introTl = gsap.timeline({
         onComplete: () => {
@@ -879,7 +929,7 @@ window.addEventListener('load', () => {
         duration: 3.0,
         ease: "power3.inOut"
     }, 0);
-    
+
     introTl.to(board.rotation, {
         z: Math.PI * 2,
         duration: 3.0,
@@ -893,7 +943,7 @@ window.addEventListener('load', () => {
         duration: 0.4,
         ease: "power2.in"
     }, 1.4);
-    
+
     introTl.to(bloomPass, {
         strength: 2.0,
         radius: 0.6,
@@ -914,7 +964,7 @@ window.addEventListener('load', () => {
         duration: 1.5,
         ease: "expo.out"
     }, 1.6);
-    
+
     introTl.to(subtitle, {
         opacity: 1,
         scale: 1,
@@ -923,13 +973,13 @@ window.addEventListener('load', () => {
         duration: 1.5,
         ease: "expo.out"
     }, 1.7);
-    
+
     introTl.to(line, {
         width: "100%",
         duration: 1.5,
         ease: "expo.out"
     }, 1.6);
-    
+
     // Hold briefly before unlocking screen
-    introTl.to({}, { duration: 0.3 }); 
+    introTl.to({}, { duration: 0.3 });
 });
