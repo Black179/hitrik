@@ -60,83 +60,114 @@ const chipGroup = new THREE.Group();
 chipGroup.position.set(0, 0, 0); 
 board.add(chipGroup);
 
-function createRandomChipTexture() {
+function createChipTexture(isBump = false) {
     const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 512;
+    canvas.width = 1024; canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     
-    ctx.clearRect(0, 0, 512, 512);
-    ctx.shadowColor = 'rgba(0, 243, 255, 0.3)';
-    ctx.shadowBlur = 4; // very light glow
-    ctx.strokeStyle = '#007c82'; // medium-dark cyan
-    ctx.fillStyle = '#007c82'; // medium-dark cyan
+    // Substrate background
+    ctx.fillStyle = isBump ? '#000000' : '#0a0d14'; // Pitch black for bump mapping zero depth
+    ctx.fillRect(0, 0, 1024, 1024);
     
-    const p = 16;
-    ctx.lineWidth = 10;
-    if (ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(p, p, 512 - p*2, 512 - p*2, 16); ctx.stroke();
-    } else {
-        ctx.strokeRect(p, p, 512 - p*2, 512 - p*2);
+    // Transistor Hierarchical Micro-grid
+    for(let i=0; i<1024; i+=16) {
+        if (i % 64 === 0) {
+            // Major grid lines
+            ctx.strokeStyle = isBump ? '#555555' : 'rgba(0, 243, 255, 0.4)';
+            ctx.lineWidth = 2; // Deep grooves and bright cyan traces
+        } else {
+            // Minor grid lines
+            ctx.strokeStyle = isBump ? '#222222' : 'rgba(0, 243, 255, 0.15)';
+            ctx.lineWidth = 1;
+        }
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1024, i); ctx.stroke();
     }
     
-    // Abstract randomized symmetry
+    // Trace colors
+    const traceCyan = isBump ? '#ffffff' : '#00f3ff';
+    const tracePurple = isBump ? '#ffffff' : '#7700ff';
+    const padMid = isBump ? '#ffffff' : '#00b3cc';
+
+    ctx.strokeStyle = traceCyan; 
+    ctx.fillStyle = traceCyan;
+    ctx.shadowBlur = 0; // Pure PBR depth rules out manual shadow
+    
+    const p = 32;
+    ctx.lineWidth = 24;
+    ctx.strokeStyle = padMid;
+    ctx.strokeRect(p, p, 1024 - p*2, 1024 - p*2);
+    
+    // Draw thick pads with alternating colors
+    for(let i=p+64; i<1024-p-64; i+=64) {
+        ctx.fillStyle = (i % 128 === 0) && !isBump ? traceCyan : padMid;
+        ctx.fillRect(p-12, i, 24, 32);     
+        ctx.fillRect(1024-p-12, i, 24, 32); 
+        ctx.fillRect(i, p-12, 32, 24);     
+        ctx.fillRect(i, 1024-p-12, 32, 24); 
+    }
+
     ctx.lineWidth = 4;
-    
-    // Use seeded randomness roughly so it looks structured
-    const routes = [];
-    for(let i=0; i<12; i++) {
-        routes.push({
-            sx: Math.random() * 150 + 60,
-            sy: Math.random() * 150 + 60,
-            dx: Math.random() * 80 - 40,
-            dy: Math.random() * 80 - 40,
-            diag: Math.random() * 40,
-            nodeRadius: 3 + Math.random() * 4
-        });
-    }
-
-    const drawQuadrant = (scaleX, scaleY) => {
-        ctx.save();
-        ctx.translate(256, 256);
-        ctx.scale(scaleX, scaleY);
-        
-        routes.forEach(r => {
-            ctx.beginPath();
-            let cx = r.sx; let cy = r.sy;
-            ctx.moveTo(cx, cy);
-            
-            if(r.dx > r.dy) cx += r.dx;
-            else cy += r.dy;
-            ctx.lineTo(cx, cy);
-            
-            cx += r.diag; cy += r.diag;
-            ctx.lineTo(cx, cy);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.arc(cx, cy, r.nodeRadius, 0, Math.PI*2);
-            ctx.fill();
-        });
-        
-        ctx.restore();
+    const drawBank = (x, y, isAccent) => {
+        ctx.fillStyle = isBump ? '#222222' : '#051829'; 
+        ctx.strokeStyle = isBump ? '#ffffff' : (isAccent ? tracePurple : padMid);
+        ctx.fillRect(x, y, 240, 320);
+        ctx.strokeRect(x, y, 240, 320);
+        ctx.beginPath();
+        for(let cy=y+16; cy<y+320; cy+=16) {
+            ctx.moveTo(x, cy); ctx.lineTo(x+240, cy);
+        }
+        ctx.stroke();
     };
-    
-    drawQuadrant(1, 1);
-    drawQuadrant(-1, 1);
-    drawQuadrant(1, -1);
-    drawQuadrant(-1, -1);
+    drawBank(128, 128, true); 
+    drawBank(1024-368, 128, false); 
+    drawBank(128, 1024-448, false); 
+    drawBank(1024-368, 1024-448, true); 
 
-    // Central solid block
-    ctx.shadowBlur = 20;
-    ctx.fillRect(256 - 65, 256 - 65, 130, 130);
+    // Core
+    ctx.fillStyle = isBump ? '#aaaaaa' : '#0a101a'; // Very dark inner core
+    ctx.strokeStyle = isBump ? '#ffffff' : traceCyan;
+    ctx.fillRect(384, 384, 256, 256);
+    ctx.lineWidth = 8;
+    ctx.strokeRect(384, 384, 256, 256);
     
-    // VLSI text
-    ctx.fillStyle = '#010206';
-    ctx.shadowBlur = 0;
-    ctx.font = 'bold 45px "Orbitron", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('VLSI', 256, 258);
+    // Inner trace ring in core
+    ctx.strokeStyle = isBump ? '#ffffff' : tracePurple; // Purple inner ring
+    ctx.lineWidth = 2;
+    ctx.strokeRect(400, 400, 224, 224);
+
+    // Buses
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = traceCyan;
+    ctx.beginPath();
+    for(let i=416; i<=608; i+=16) {
+        ctx.moveTo(368, i); ctx.lineTo(384, i);
+        ctx.moveTo(640, i); ctx.lineTo(656, i);
+        ctx.moveTo(i, 368); ctx.lineTo(i, 384);
+        ctx.moveTo(i, 640); ctx.lineTo(i, 656);
+    }
+    ctx.stroke();
+    
+    // Core grid dots
+    ctx.fillStyle = isBump ? '#ffffff' : tracePurple;
+    for(let bx=432; bx<=592; bx+=32) {
+        for(let by=432; by<=592; by+=32) {
+            if (bx===512 && by===512) continue; // center
+            ctx.beginPath(); ctx.arc(bx, by, 3, 0, Math.PI*2); ctx.fill();
+        }
+    }
+    
+    // Core text
+    if (!isBump) {
+        ctx.fillStyle = '#ffffff'; 
+        ctx.font = 'bold 36px "Exo 2", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('AETHRYX', 512, 512 - 20);
+        ctx.font = '24px "Orbitron", sans-serif';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText('QUANTUM CORE', 512, 512 + 20);
+    }
     
     const texture = new THREE.CanvasTexture(canvas);
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -172,24 +203,39 @@ chipGroup.add(auraMesh);
 // 1B. Sleek Black Base (16x16)
 const baseGeo = new THREE.BoxGeometry(16, 16, 1.5); 
 const baseMat = new THREE.MeshPhysicalMaterial({
-    color: 0x010206, 
+    color: 0x07111c, 
     metalness: 0.9,  
     roughness: 0.3, 
 });
 const baseMesh = new THREE.Mesh(baseGeo, baseMat);
 chipGroup.add(baseMesh);
 
-// 1C. Randomized Texture Plane
+// 1C. High-End PBR Die Surface
 const logoGeo = new THREE.PlaneGeometry(16, 16);
-const logoMat = new THREE.MeshBasicMaterial({ 
-    map: createRandomChipTexture(), 
-    transparent: true, 
-    opacity: 1.0,
-    blending: THREE.NormalBlending // changed from AdditiveBlending to remove intrinsic glow mixing
+const chipMap = createChipTexture(false);
+const chipBump = createChipTexture(true);
+
+const logoMat = new THREE.MeshPhysicalMaterial({ 
+    map: chipMap,
+    bumpMap: chipBump,
+    bumpScale: 0.08,
+    metalness: 0.8,
+    roughness: 0.3,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.1,
+    transparent: false
 });
 const logoMesh = new THREE.Mesh(logoGeo, logoMat);
-logoMesh.position.z = 0.8; 
+logoMesh.position.z = 0.76; 
 chipGroup.add(logoMesh);
+
+// Add strong directional light to highlight metallic traces & bumps
+const directionalLight = new THREE.DirectionalLight(0x00f3ff, 4.0); // Matching cyan theme, brighter
+directionalLight.position.set(5, 10, 15);
+scene.add(directionalLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 2.0); // Major brightness lift
+scene.add(ambientLight);
 
 
 // ---- 2. DENSE PCB PATHWAYS ----
@@ -389,12 +435,9 @@ function animate() {
         }
     });
     
-    // Very very little glow
+    // Subtle aura pulse
     auraMesh.scale.setScalar(1.0); 
-    auraMesh.material.opacity = 0.1; // extreme subtle
-    logoMesh.material.opacity = 0.7; // subtle
-    chipLight.intensity = 0.1; // very faint pointlight
-    chipLight.distance = 20;
+    auraMesh.material.opacity = 0.1; 
 
     composer.render();
 }
